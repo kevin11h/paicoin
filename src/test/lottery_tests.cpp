@@ -68,18 +68,18 @@ BOOST_AUTO_TEST_CASE(lottery_num_selection)
 
 BOOST_AUTO_TEST_CASE(fetch_winners_errors)
 {
-    auto ticketTreap = TicketTreap();
+    auto ticketTreap = std::make_shared<TicketTreap>();
     for (int i = 0; i < 0xff; ++i) {
         const char a_seed[] = {char(i)};
         uint256 hash = Hash(std::begin(a_seed), std::end(a_seed));
-        auto value = std::make_shared<Value>(
+        auto value = Value(
             uint32_t(i),
             (i%2 == 0),
             (i%2 != 0),
             (i%2 == 0),
             (i%2 != 0)
         );
-        ticketTreap = ticketTreap.put(hash, value);
+        ticketTreap = ticketTreap->put(hash, value);
     }
 
     // Bad index too big.
@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(fetch_winners_errors)
     idxs.push_back(4u);
     idxs.push_back(256u);
     BOOST_CHECK_THROW(
-        ticketTreap.fetchWinners(idxs),
+        ticketTreap->fetchWinners(idxs),
          std::runtime_error);
 }
 

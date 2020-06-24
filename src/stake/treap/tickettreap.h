@@ -4,8 +4,10 @@
 #include "treapnode.h"
 #include "prevector.h"
 #include <functional>
+#include <boost/optional.hpp>
 
-typedef std::function<bool(const uint256&, const ValuePtr&)> Predicate;
+typedef std::function<bool(const uint256&, const Value&)> Predicate;
+typedef std::shared_ptr<TicketTreap> TicketTreapPtr;
 // Immutable class that represents a treap data structure which is used to hold ordered
 // key/value pairs using a combination of binary search tree and heap semantics.
 //
@@ -42,12 +44,13 @@ class TicketTreap final
 public:
     TicketTreap();
     explicit TicketTreap(TreapNodePtr treapNode, int count, uint64_t totalSize);
+    // ~TicketTreap() {};
 
-    TicketTreap(const TicketTreap&) = default;
-    TicketTreap& operator=(const TicketTreap&) = default;
+    // TicketTreap(const TicketTreap&) = delete;
+    // TicketTreap& operator=(const TicketTreap&) = delete;
 
-    TicketTreap(TicketTreap&&) = default;
-    TicketTreap& operator=(TicketTreap&&) = default;
+    // TicketTreap(TicketTreap&&) = delete;
+    // TicketTreap& operator=(TicketTreap&&) = delete;
 
 public:
     // Len returns the number of items stored in the treap.
@@ -64,7 +67,7 @@ public:
 
     // Get returns the value for the passed key.  The function will return nil when
     // the key does not exist.
-    ValuePtr get(const uint256& key) const;
+    boost::optional<Value> get(const uint256& key) const;
 
     // GetByIndex returns the (Key, *Value) at the given position and panics if idx
     // is out of bounds.
@@ -72,12 +75,12 @@ public:
 
     // Put inserts the passed key/value pair.  Passing a nil value will result in a
     // NOOP.
-    TicketTreap put(const uint256& key, const ValuePtr& value) const;
+    TicketTreapPtr put(const uint256& key, const Value& value) const;
 
     // Delete removes the passed key from the treap and returns the resulting treap
     // if it exists.  The original immutable treap is returned if the key does not
     // exist.
-    TicketTreap deleteKey(const uint256& key) const;
+    TicketTreapPtr deleteKey(const uint256& key) const;
 
     // ForEach invokes the passed function with every key/value pair in the treap
     // in ascending order.
@@ -101,14 +104,12 @@ private:
     // when the key does not exist.
     TreapNodePtr get_node(const uint256& key) const;
 private:
-    TreapNodePtr    root;
-    int             count;
+    const TreapNodePtr    root;
+    const int             count;
 
     // totalSize is the best estimate of the total size of of all data in
     // the treap including the keys, values, and node sizes.
-    uint64_t        totalSize;
+    const uint64_t        totalSize;
 };
-
-typedef std::shared_ptr<TicketTreap> TicketTreapPtr;
 
 #endif // PAICOIN_STAKE_TICKETTREAP_H
