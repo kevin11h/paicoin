@@ -55,14 +55,14 @@ HashVector StakeNode::ExpiredByBlock() const
 
 bool StakeNode::ExistsLiveTicket(const uint256& ticket) const
 {
-    return liveTickets->has(ticket);
+    return liveTickets.has(ticket);
 }
 
 HashVector StakeNode::LiveTickets() const
 {
     HashVector tickets{};
 
-    liveTickets->forEach(
+    liveTickets.forEach(
         [&tickets](const uint256& key, const Value&) {
             tickets.push_back(key);
             return true;
@@ -74,19 +74,19 @@ HashVector StakeNode::LiveTickets() const
 
 int StakeNode::PoolSize() const
 {
-    return liveTickets->len();
+    return liveTickets.len();
 }
 
 bool StakeNode::ExistsMissedTicket(const uint256& ticket) const
 {
-    return missedTickets->has(ticket);
+    return missedTickets.has(ticket);
 }
 
 HashVector StakeNode::MissedTickets() const
 {
     HashVector tickets{};
 
-    missedTickets->forEach(
+    missedTickets.forEach(
         [&tickets](const uint256& key, const Value&) {
             tickets.push_back(key);
             return true;
@@ -98,14 +98,14 @@ HashVector StakeNode::MissedTickets() const
 
 bool StakeNode::ExistsRevokedTicket(const uint256& ticket) const
 {
-    return revokedTickets->has(ticket);
+    return revokedTickets.has(ticket);
 }
 
 HashVector StakeNode::RevokedTickets() const
 {
     HashVector tickets{};
 
-    revokedTickets->forEach(
+    revokedTickets.forEach(
         [&tickets](const uint256& key, const Value&) {
             tickets.push_back(key);
             return true;
@@ -117,11 +117,11 @@ HashVector StakeNode::RevokedTickets() const
 
 bool StakeNode::ExistsExpiredTicket(const uint256& ticket) const
 {
-    auto v = missedTickets->get(ticket);
+    auto v = missedTickets.get(ticket);
     if (v && v->expired) {
         return true;
     }
-    v = revokedTickets->get(ticket);
+    v = revokedTickets.get(ticket);
     if (v && v->expired) {
         return true;
     }
@@ -173,7 +173,7 @@ std::shared_ptr<StakeNode> StakeNode::ConnectNode(const uint256& lotteryIV, cons
         // updating the live and missed ticket treaps as necessary.  We need
         // to copy the value here so we don't modify it in the previous treap.
         for (const auto& it : nextWinners) {
-            auto value = connectedNode->liveTickets->get(it);
+            auto value = connectedNode->liveTickets.get(it);
             assert(value);
 
             // If it's spent in this block, mark it as being spent.  Otherwise,
@@ -186,13 +186,13 @@ std::shared_ptr<StakeNode> StakeNode::ConnectNode(const uint256& lotteryIV, cons
             if (end(ticketsVoted) != std::find(begin(ticketsVoted),end(ticketsVoted),it)) {
                 value->spent = true;
                 value->missed = false;
-                connectedNode->liveTickets = connectedNode->liveTickets->deleteKey(it);
+                connectedNode->liveTickets = connectedNode->liveTickets.deleteKey(it);
             }
             else{
                 value->spent = false;
                 value->missed = true;
-                connectedNode->liveTickets = connectedNode->liveTickets->deleteKey(it);
-                connectedNode->missedTickets = connectedNode->missedTickets->put(it,*value);
+                connectedNode->liveTickets = connectedNode->liveTickets.deleteKey(it);
+                connectedNode->missedTickets = connectedNode->missedTickets.put(it,*value);
             }
 
             connectedNode->databaseUndoUpdate.push_back(
@@ -207,13 +207,13 @@ std::shared_ptr<StakeNode> StakeNode::ConnectNode(const uint256& lotteryIV, cons
             toExpireHeight = connectedNode->height - connectedNode->params.nTicketExpiry;
         }
 
-        connectedNode->liveTickets->forEachByHeight(toExpireHeight + 1, [&connectedNode](const uint256& treapKey, const Value& value) {
+        connectedNode->liveTickets.forEachByHeight(toExpireHeight + 1, [&connectedNode](const uint256& treapKey, const Value& value) {
                 // Make a copy of the value.
                 auto v = value;
                 v.missed = true;
                 v.expired = true;
-                connectedNode->liveTickets = connectedNode->liveTickets->deleteKey(treapKey);
-                connectedNode->missedTickets = connectedNode->missedTickets->put(treapKey, v);
+                connectedNode->liveTickets = connectedNode->liveTickets.deleteKey(treapKey);
+                connectedNode->missedTickets = connectedNode->missedTickets.put(treapKey, v);
 
                 connectedNode->databaseUndoUpdate.push_back(UndoTicketData{
                     treapKey,
@@ -231,11 +231,11 @@ std::shared_ptr<StakeNode> StakeNode::ConnectNode(const uint256& lotteryIV, cons
         // Process all the revocations, moving them from the missed to the
         // revoked treap and recording them in the undo data.
         for (const auto& it : revokedTickets) {
-            auto value = connectedNode->missedTickets->get(it);
+            auto value = connectedNode->missedTickets.get(it);
 
             value->revoked = true;
-            connectedNode->missedTickets = connectedNode->missedTickets->deleteKey(it);
-            connectedNode->revokedTickets = connectedNode->revokedTickets->put(it,*value);
+            connectedNode->missedTickets = connectedNode->missedTickets.deleteKey(it);
+            connectedNode->revokedTickets = connectedNode->revokedTickets.put(it,*value);
 
             connectedNode->databaseUndoUpdate.push_back(UndoTicketData{
                 it,
@@ -258,7 +258,7 @@ std::shared_ptr<StakeNode> StakeNode::ConnectNode(const uint256& lotteryIV, cons
             false,
             false
         );
-        connectedNode->liveTickets = connectedNode->liveTickets->put(k,v);
+        connectedNode->liveTickets = connectedNode->liveTickets.put(k,v);
 
         connectedNode->databaseUndoUpdate.push_back(UndoTicketData{
             it,
@@ -275,9 +275,9 @@ std::shared_ptr<StakeNode> StakeNode::ConnectNode(const uint256& lotteryIV, cons
     if (connectedNode->height >= connectedNode->params.nStakeValidationHeight - 1 ) {
         // Find the next set of winners.
         auto prng = Hash256PRNG(lotteryIV);
-        const auto& idxs = prng.FindTicketIdxs(connectedNode->liveTickets->len(), connectedNode->params.nTicketsPerBlock);
+        const auto& idxs = prng.FindTicketIdxs(connectedNode->liveTickets.len(), connectedNode->params.nTicketsPerBlock);
 
-        const auto& nextWinnerKeys = connectedNode->liveTickets->fetchWinners(idxs);
+        const auto& nextWinnerKeys = connectedNode->liveTickets.fetchWinners(idxs);
 
         auto stateBuffer = HashVector{};
         for(const auto& it : nextWinnerKeys){
@@ -350,7 +350,7 @@ std::shared_ptr<StakeNode> StakeNode::DisconnectNode(const uint256& parentLotter
         // All flags are unset; this is a newly added ticket.
         // Remove it from the list of live tickets.
         if (!it.missed && !it.revoked && !it.spent) {
-            restoredNode->liveTickets = restoredNode->liveTickets->deleteKey(k);
+            restoredNode->liveTickets = restoredNode->liveTickets.deleteKey(k);
         }
 
         // The ticket was missed and revoked. It needs to
@@ -358,8 +358,8 @@ std::shared_ptr<StakeNode> StakeNode::DisconnectNode(const uint256& parentLotter
         // missed ticket treap.
         else if ( it.missed && it.revoked) {
             v.revoked = false;
-            restoredNode->revokedTickets = restoredNode->revokedTickets->deleteKey(k);
-            restoredNode->missedTickets = restoredNode->missedTickets->put(k,v);
+            restoredNode->revokedTickets = restoredNode->revokedTickets.deleteKey(k);
+            restoredNode->missedTickets = restoredNode->missedTickets.put(k,v);
         }
 
         // The ticket was missed and was previously live.
@@ -376,8 +376,8 @@ std::shared_ptr<StakeNode> StakeNode::DisconnectNode(const uint256& parentLotter
             }
 
             v.missed = false;
-            restoredNode->missedTickets = restoredNode->missedTickets->deleteKey(k);
-            restoredNode->liveTickets = restoredNode->liveTickets->put(k,v);
+            restoredNode->missedTickets = restoredNode->missedTickets.deleteKey(k);
+            restoredNode->liveTickets = restoredNode->liveTickets.put(k,v);
         }
 
         // The ticket was spent. Reinsert it into the live
@@ -387,7 +387,7 @@ std::shared_ptr<StakeNode> StakeNode::DisconnectNode(const uint256& parentLotter
             v.spent = false;
             restoredNode->nextWinners.push_back(it.ticketHash);
             stateBuffer.push_back(it.ticketHash);
-            restoredNode->liveTickets = restoredNode->liveTickets->put(k,v);
+            restoredNode->liveTickets = restoredNode->liveTickets.put(k,v);
         }
 
         else {
@@ -398,7 +398,7 @@ std::shared_ptr<StakeNode> StakeNode::DisconnectNode(const uint256& parentLotter
     if (this->height >= this->params.nStakeValidationHeight) {
         auto prng = Hash256PRNG(parentLotteryIV);
         
-        const auto& idxs = prng.FindTicketIdxs(restoredNode->liveTickets->len(), restoredNode->params.nTicketsPerBlock);
+        const auto& idxs = prng.FindTicketIdxs(restoredNode->liveTickets.len(), restoredNode->params.nTicketsPerBlock);
         stateBuffer.push_back(prng.StateHash());
         const auto& hex = Hash(stateBuffer.begin(),stateBuffer.end()).GetHex();
         restoredNode->finalState.SetHex(hex);

@@ -43,14 +43,8 @@ class TicketTreap final
 {
 public:
     TicketTreap();
+private:
     explicit TicketTreap(TreapNodePtr treapNode, int count, uint64_t totalSize);
-    // ~TicketTreap() {};
-
-    // TicketTreap(const TicketTreap&) = delete;
-    // TicketTreap& operator=(const TicketTreap&) = delete;
-
-    // TicketTreap(TicketTreap&&) = delete;
-    // TicketTreap& operator=(TicketTreap&&) = delete;
 
 public:
     // Len returns the number of items stored in the treap.
@@ -75,12 +69,12 @@ public:
 
     // Put inserts the passed key/value pair.  Passing a nil value will result in a
     // NOOP.
-    TicketTreapPtr put(const uint256& key, const Value& value) const;
+    TicketTreap put(const uint256& key, const Value& value) const;
 
     // Delete removes the passed key from the treap and returns the resulting treap
     // if it exists.  The original immutable treap is returned if the key does not
     // exist.
-    TicketTreapPtr deleteKey(const uint256& key) const;
+    TicketTreap deleteKey(const uint256& key) const;
 
     // ForEach invokes the passed function with every key/value pair in the treap
     // in ascending order.
@@ -104,12 +98,12 @@ private:
     // when the key does not exist.
     TreapNodePtr get_node(const uint256& key) const;
 private:
-    const TreapNodePtr    root;
-    const int             count;
+    TreapNodePtr    root;
+    int             count;
 
     // totalSize is the best estimate of the total size of of all data in
     // the treap including the keys, values, and node sizes.
-    const uint64_t        totalSize;
+    uint64_t        totalSize;
 };
 
 #endif // PAICOIN_STAKE_TICKETTREAP_H

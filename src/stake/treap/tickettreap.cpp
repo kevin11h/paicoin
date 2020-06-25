@@ -77,7 +77,7 @@ KeyValuePair TicketTreap::getByIndex(int idx) const
     return root->getByIndex(idx);
 }
 
-TicketTreapPtr TicketTreap::put(const uint256& key, const Value& value) const
+TicketTreap TicketTreap::put(const uint256& key, const Value& value) const
 {
     // // Nothing to do if a nil value is passed.
     // if (value == nullptr) {
@@ -87,7 +87,7 @@ TicketTreapPtr TicketTreap::put(const uint256& key, const Value& value) const
     // The node is the root of the tree if there isn't already one.
     if (root == nullptr) {
         auto root = std::make_shared<TreapNode>(key, value, value.height);
-        return std::make_shared<TicketTreap>(root, 1, sizeof(TreapNode));
+        return TicketTreap(root, 1, sizeof(TreapNode));
     }
 
     // Find the binary tree insertion point and construct a replaced list of
@@ -133,7 +133,7 @@ TicketTreapPtr TicketTreap::put(const uint256& key, const Value& value) const
         // Return new immutable treap with the replaced node and
         // ancestors up to and including the root of the tree.
         auto newRoot = parents.at(parents.len() - 1);
-        return std::make_shared<TicketTreap>(newRoot, count, totalSize);
+        return TicketTreap(newRoot, count, totalSize);
     }
 
     // Recompute the size member of all parents, to account for inserted item.
@@ -200,10 +200,10 @@ TicketTreapPtr TicketTreap::put(const uint256& key, const Value& value) const
         }
     }
 
-    return std::make_shared<TicketTreap>(newRoot, count+1, totalSize + sizeof(TreapNode));
+    return TicketTreap(newRoot, count+1, totalSize + sizeof(TreapNode));
 }
     
-TicketTreapPtr TicketTreap::deleteKey(const uint256& key) const
+TicketTreap TicketTreap::deleteKey(const uint256& key) const
 {
     // Find the node for the key while constructing a list of parents
     auto parents = ParentStack();
@@ -231,14 +231,14 @@ TicketTreapPtr TicketTreap::deleteKey(const uint256& key) const
 
     // There is nothing to do if the key does not exist.
     if (delNode == nullptr) {
-        return std::make_shared<TicketTreap>(*this);
+        return *this;
     }
 
     // When the only node in the tree is the root node and it is the one
     // being deleted, there is nothing else to do besides removing it.
     auto parent = parents.at(1);
     if (parent == nullptr && delNode->left == nullptr && delNode->right == nullptr) {
-        return std::make_shared<TicketTreap>(nullptr,0,0);
+        return TicketTreap(nullptr,0,0);
     }
 
     // Construct a replaced list of parents and the node to delete itself.
@@ -329,7 +329,7 @@ TicketTreapPtr TicketTreap::deleteKey(const uint256& key) const
         parent->left.reset();
     }
 
-    return std::make_shared<TicketTreap>(newRoot, count-1, totalSize - sizeof(TreapNode));
+    return TicketTreap(newRoot, count-1, totalSize - sizeof(TreapNode));
 }
 
 void TicketTreap::forEach(Predicate func) const
